@@ -35,10 +35,16 @@ export const menuData: Menus[] = [
     },
     {
         id: '2',
-        title: '组件',
-        index: '2-1',
+        title: '基本信息',
+        index: '/base',
         icon: 'Calendar',
         children: [
+            {
+                id: '30',
+                pid: '2',
+                index: '/user-info',
+                title: '员工信息',
+            },
             {
                 id: '21',
                 pid: '3',

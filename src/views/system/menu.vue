@@ -14,8 +14,11 @@
             </TableCustom>
 
         </div>
+        <!--这是 Element UI 中的对话框组件。它接收一系列属性来控制对话框的行为和外观，例如 title 控制对话框的标题，
+            v-model 控制对话框的显示与隐藏，width 控制对话框的宽度，destroy-on-close 控制在关闭对话框时是否销毁对话框的内容，
+            close-on-click-modal 控制点击遮罩层时是否关闭对话框，@close 是对话框关闭时的事件处理函数。-->
         <el-dialog :title="isEdit ? '编辑' : '新增'" v-model="visible" width="700px" destroy-on-close
-            :close-on-click-modal="false" @close="closeDialog">
+            :close-on-click-modal="true" @close="closeDialog">
             <TableEdit :form-data="rowData" :options="options" :edit="isEdit" :update="updateData">
                 <template #parent>
                     <el-cascader v-model="rowData.pid" :options="cascaderOptions" :props="{ checkStrictly: true }"

@@ -40,6 +40,7 @@
 <script lang="ts" setup>
 import { FormOption } from '@/types/form-option';
 import { FormInstance, FormRules, UploadProps } from 'element-plus';
+import { it } from 'element-plus/es/locale';
 import { PropType, ref } from 'vue';
 
 const { options, formData, edit, update } = defineProps({
@@ -64,12 +65,22 @@ const { options, formData, edit, update } = defineProps({
 
 const form = ref({ ...(edit ? formData : {}) });
 
+//options.list.map(item => { ... })：对 options.list 数组中的每个元素执行一个映射操作。
+//map 方法遍历数组中的每个项，并根据每个项生成一个新的对象或值
 const rules: FormRules = options.list.map(item => {
+	if(item.prop == `empNo`){
+		return { [item.prop]: [{required: true, message:'员工编号应该位于4~30字符', min:4, max:30, trigger:'blur'}] };
+	}
+	if(item.prop == `empMobile`){
+		return { [item.prop]: [{required: true, pattern: /^1[3456789]\d{9}$/, message: '手机号码格式不正确', trigger: 'blur' }] };
+	}
 	if (item.required) {
 		return { [item.prop]: [{ required: true, message: `${item.label}不能为空`, trigger: 'blur' }] };
 	}
 	return {};
 }).reduce((acc, cur) => ({ ...acc, ...cur }), {});
+//.reduce((acc, cur) => ({ ...acc, ...cur }), {})：对上述映射得到的对象数组执行 reduce 操作，将所有的对象合并为一个对象。
+//reduce 方法将数组中的每个元素（对象）应用于指定的函数（此处为对象合并函数），以将其归约为单个值
 
 
 const formRef = ref<FormInstance>();
@@ -77,6 +88,7 @@ const saveEdit = (formEl: FormInstance | undefined) => {
 	if (!formEl) return;
 	formEl.validate(valid => {
 		if (!valid) return false;
+		//form.value.roleName
 		update(form.value);
 	});
 };

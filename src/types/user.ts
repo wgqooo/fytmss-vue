@@ -1,12 +1,13 @@
 
 export interface User {
     id: number;
-    name: string;
-    password: string;
-    email: string;
-    phone: string;
-    role: string;
-    date: string;
+    empNo:string
+    empName: string;
+    empSex:string;
+    empMobile: string;
+    empBirthday:Date
+    empAddress:string;
+    roleName: string;
 }
 
 export interface Register {

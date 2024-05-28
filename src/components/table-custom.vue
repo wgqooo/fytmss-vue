@@ -111,7 +111,7 @@ const props = defineProps({
     },
     pageSize: {
         type: Number,
-        default: 10
+        default: 5
     },
 
     layout: {
@@ -120,7 +120,8 @@ const props = defineProps({
     },
     delFunc: {
         type: Function,
-        default: () => { }
+        default: () => { 
+        }
     },
     viewFunc: {
         type: Function,

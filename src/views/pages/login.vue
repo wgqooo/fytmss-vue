@@ -1,4 +1,11 @@
 <template>
+        <el-dialog
+            title="异地登录提示"
+           :visible.sync="dialogVisible"
+            width="30%"
+            center>
+           <p>您的账号在其他地方登录，请重新登录</p>
+        </el-dialog>
     <div class="login-bg">
         <div class="login-container">
             <div class="login-header">
@@ -37,7 +44,7 @@
                     <el-link type="primary" @click="$router.push('/reset-pwd')">忘记密码</el-link>
                 </div>
                 <el-button class="login-btn" type="primary" size="large" @click="submitForm(login)">登录</el-button>
-                <p class="login-tips">Tips : 用户名和密码随便填。</p>
+                <!-- <p class="login-tips">Tips : 用户名和密码随便填。</p> -->
                 <p class="login-text">
                     没有账号？<el-link type="primary" @click="$router.push('/register')">立即注册</el-link>
                 </p>
@@ -53,13 +60,15 @@ import { usePermissStore } from '@/store/permiss';
 import { useRouter } from 'vue-router';
 import { ElMessage } from 'element-plus';
 import type { FormInstance, FormRules } from 'element-plus';
-import axios from 'axios';
+//import axios from 'axios';
+import service from '@/utils/request';
 
 interface LoginInfo {
     username: string;
     password: string;
 }
 
+const dialogVisible = ref(false)
 const lgStr = localStorage.getItem('login-param');
 const defParam = lgStr ? JSON.parse(lgStr) : null;
 const checked = ref(lgStr ? true : false);
@@ -71,6 +80,7 @@ const param = reactive<LoginInfo>({
 });
 
 const rules: FormRules = {
+    //这里的username是规则
     username: [
         {
             required: true,
@@ -85,8 +95,8 @@ const rules: FormRules = {
     password: [
         { 
             required: true, 
-            message: '密码为6~18位字母、数字和符号', 
-            min: 6,
+            message: '密码为4~30位字母、数字和符号', 
+            min: 4,
             max: 30,
             trigger: 'blur' 
         }
@@ -95,15 +105,14 @@ const rules: FormRules = {
 const permiss = usePermissStore();
 const login = ref<FormInstance>();
 
-const baseUrl = '/api';
 const submitForm = (formEl: FormInstance | undefined) => {
     if (!formEl) return;
     formEl.validate((valid: boolean) => {
         if (valid) {
-            axios({
+            service({
                 method: 'post',
-                url: baseUrl+"/sys/login",
-                data: param,
+                url: "sys/login",
+                data: JSON.stringify(param),
                 headers:{
                     "Content-Type": "application/json"
                 }
@@ -114,7 +123,7 @@ const submitForm = (formEl: FormInstance | undefined) => {
                     }else if(response.data.code == 0){
                         ElMessage.success(response.data.msg);
                         localStorage.setItem('vuems_name', param.username);
-                        const keys = permiss.defaultList[param.username == 'admin' ? 'admin' : 'user'];
+                        const keys = permiss.defaultList[param.username == '77777' ? 'admin' : 'user'];
                         permiss.handleSet(keys);
                         router.push('/');
                         if (checked.value) {

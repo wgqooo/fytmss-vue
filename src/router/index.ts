@@ -51,11 +51,20 @@ const routes: RouteRecordRaw[] = [
                 component: () => import(/* webpackChunkName: "system-menu" */ '../views/system/menu.vue'),
             },
             {
+                path: '/user-info',
+                name: 'user-info',
+                meta: {
+                    title: '员工信息',
+                    permiss: '31',
+                },
+                component: () => import(/* webpackChunkName: "table" */ '../views/base/UserInfo.vue'),
+            },
+            {
                 path: '/table',
                 name: 'basetable',
                 meta: {
                     title: '基础表格',
-                    permiss: '31',
+                    //permiss: '31',
                 },
                 component: () => import(/* webpackChunkName: "table" */ '../views/table/basetable.vue'),
             },
@@ -279,7 +288,9 @@ to: 即将要进入的目标,from: 当前导航正要离开的路由
 router.beforeEach((to, from, next) => {
     //开启进度条的东西
     NProgress.start();
+    //这个role是用户的empNo
     const role = localStorage.getItem('vuems_name');
+
     const permiss = usePermissStore();
 
     if (!role && to.meta.noAuth !== true) {
