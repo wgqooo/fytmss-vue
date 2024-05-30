@@ -37,24 +37,30 @@
         </div>
         <el-table class="mgb20" :style="{ width: '100%' }" border :data="tableData" :row-key="rowKey"
             @selection-change="handleSelectionChange" table-layout="auto">
+
             <template v-for="item in columns" :key="item.prop">
                 <el-table-column v-if="item.visible" :prop="item.prop" :label="item.label" :width="item.width"
                     :type="item.type" :align="item.align || 'center'">
-
                     <template #default="{ row, column, $index }" v-if="item.type === 'index'">
                         {{ getIndex($index) }}
                     </template>
                     <template #default="{ row, column, $index }" v-if="!item.type">
                         <slot :name="item.prop" :rows="row" :index="$index">
                             <template v-if="item.prop == 'operator'">
-                                <el-button type="warning" size="small" :icon="View" @click="viewFunc(row)">
-                                    查看
-                                </el-button>
-                                <el-button type="primary" size="small" :icon="Edit" @click="editFunc(row)">
+                                <el-button type="primary" round size="small" :icon="Edit" @click="editFunc(row)">
                                     编辑
                                 </el-button>
-                                <el-button type="danger" size="small" :icon="Delete" @click="handleDelete(row)">
+                                <el-button type="danger" round size="small" :icon="Delete" @click="handleDelete(row)">
                                     删除
+                                </el-button>
+                                <el-button v-if="row.enabled" type="info" round size="small" :icon="Lock" @click="freezeFunc(row)">
+                                    冻结
+                                </el-button>
+                                <el-button v-else-if="!row.enabled" type="success" round size="small" :icon="Unlock" @click="freezeFunc(row)">
+                                    解冻
+                                </el-button>
+                                <el-button type="warning"  round size="small" :icon="View" @click="viewFunc(row)">
+                                    查看
                                 </el-button>
                             </template>
                             <span v-else-if="item.formatter">
@@ -68,17 +74,49 @@
                 </el-table-column>
             </template>
         </el-table>
-        <el-pagination v-if="hasPagination" :current-page="currentPage" :page-size="pageSize" :background="true"
+        <div class="pagePagination">
+            <el-pagination v-if="hasPagination" :current-page="pageNum"  
+            :page-size="pageSize" :background="true" prev-text="上一页" next-text="下一页"
             :layout="layout" :total="total" @current-change="handleCurrentChange" />
+             <!-- 下拉选择框 -->
+            <el-select v-model="pageVal" class="pageNumSelect" placeholder="选择每页显示条数" @change="headlePageSizeChange">
+                <el-option
+                    v-for="item in pageSizes"
+                    :key="item"
+                    :label="`${item} 条 / 页`"  
+                    :value="item"
+                />
+            </el-select>
+        </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { toRefs, PropType, ref } from 'vue'
-import { Delete, Edit, View, Refresh } from '@element-plus/icons-vue';
+import { Delete, Edit, View, Refresh,Lock, Unlock } from '@element-plus/icons-vue';
 import { ElMessageBox } from 'element-plus';
 
+
 const props = defineProps({
+    total: {
+        type: Number
+    },
+    pages: {
+        type: Number
+    },
+    size: {
+        type: Number
+    },
+    pageSize: {
+        type: Number
+    },
+    pageNum: {
+        type: Number
+    },
+    pageSizes:{
+        type: Number,
+        default:[3,5,10,20,50,100]
+    },
     // 表格相关
     tableData: {
         type: Array,
@@ -101,22 +139,9 @@ const props = defineProps({
         type: Boolean,
         default: true
     },
-    total: {
-        type: Number,
-        default: 0
-    },
-    currentPage: {
-        type: Number,
-        default: 1
-    },
-    pageSize: {
-        type: Number,
-        default: 5
-    },
-
     layout: {
         type: String,
-        default: 'total, prev, pager, next'
+        default: 'total, prev, pager, next, jumper'
     },
     delFunc: {
         type: Function,
@@ -139,21 +164,34 @@ const props = defineProps({
         type: Function,
         default: () => { }
     },
-    changePage: {
+    pagechange: {
+        type: Function,
+        default: () => { }
+    },
+    changePageSize:{
+        type: Function,
+        default: () => { }
+    },
+    freezeFunc:{
         type: Function,
         default: () => { }
     }
 })
 
+const pageVal = ref<number>(5); 
+
 let {
+    total,
+    pages,
+    size,
+    pageSize,
+    pageNum,
+    pageSizes,
     tableData,
     columns,
     rowKey,
     hasToolbar,
     hasPagination,
-    total,
-    currentPage,
-    pageSize,
     layout,
 } = toRefs(props)
 
@@ -163,29 +201,32 @@ columns.value.forEach((item) => {
     }
 })
 
+
 // 当选择项发生变化时会触发该事件
 const multipleSelection = ref([])
 const handleSelectionChange = (selection: any[]) => {
     multipleSelection.value = selection
 }
-
 // 当前页码变化的事件
 const handleCurrentChange = (val: number) => {
-    props.changePage(val)
+    props.pagechange(val)
+}
+const headlePageSizeChange = () => {
+    props.changePageSize(1, pageVal.value);
 }
 
 const handleDelete = (row) => {
     ElMessageBox.confirm('确定要删除吗？', '提示', {
         type: 'warning'
     })
-        .then(async () => {
-            props.delFunc(row);
-        })
-        .catch(() => { });
+    .then(async () => {
+        props.delFunc(row);
+    })
+    .catch(() => { });
 };
 
 const getIndex = (index: number) => {
-    return index + 1 + (currentPage.value - 1) * pageSize.value
+    return index + 1 + (pageNum.value - 1) * pageSize.value
 }
 
 </script>
@@ -203,6 +244,20 @@ const getIndex = (index: number) => {
     font-size: 18px;
     cursor: pointer;
     color: #676767;
+}
+
+.pagePagination{
+    display: flex; 
+    align-items: center; 
+}
+
+.pageNumSelect {
+    margin-left: 50px;
+    width: 150px;
+}
+
+.jumpLastPage{
+    margin-left: 20px
 }
 </style>
 <style>

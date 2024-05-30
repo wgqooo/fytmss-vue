@@ -12,6 +12,9 @@
 						:placeholder="item.placeholder" clearable>
 						<el-option v-for="opt in item.opts" :label="opt.label" :value="opt.value"></el-option>
 					</el-select>
+					<el-cascader-panel v-else-if="item.type === 'cascader'" style="width: fit-content" 
+					    :options="region" @change="handleRegionChange" v-model="form[item.prop]">
+					</el-cascader-panel>
 					<el-date-picker v-else-if="item.type === 'date'" type="date" v-model="form[item.prop]"
 						:value-format="item.format"></el-date-picker>
 					<el-switch v-else-if="item.type === 'switch'" v-model="form[item.prop]"
@@ -25,7 +28,6 @@
 						</el-icon>
 					</el-upload>
 					<slot :name="item.prop" v-else>
-
 					</slot>
 				</el-form-item>
 			</el-col>
@@ -40,8 +42,8 @@
 <script lang="ts" setup>
 import { FormOption } from '@/types/form-option';
 import { FormInstance, FormRules, UploadProps } from 'element-plus';
-import { it } from 'element-plus/es/locale';
 import { PropType, ref } from 'vue';
+import region from '@/assets/ts/ChinaCityJSON';
 
 const { options, formData, edit, update } = defineProps({
 	options: {
@@ -74,6 +76,9 @@ const rules: FormRules = options.list.map(item => {
 	if(item.prop == `empMobile`){
 		return { [item.prop]: [{required: true, pattern: /^1[3456789]\d{9}$/, message: '手机号码格式不正确', trigger: 'blur' }] };
 	}
+	if(item.prop == `empAddress`){
+		return { [item.prop]: [{required: true, message: '请选择完整的省市辖区', trigger: 'blur' }] };
+	}
 	if (item.required) {
 		return { [item.prop]: [{ required: true, message: `${item.label}不能为空`, trigger: 'blur' }] };
 	}
@@ -88,10 +93,16 @@ const saveEdit = (formEl: FormInstance | undefined) => {
 	if (!formEl) return;
 	formEl.validate(valid => {
 		if (!valid) return false;
-		//form.value.roleName
 		update(form.value);
 	});
 };
+
+//地区选择相关
+//const selectedRegion = ref('');
+const handleRegionChange = (val:[]) => {
+	//数组合成字符串
+	form.value[`empAddress`] = val.join('')
+}
 
 const handleAvatarSuccess: UploadProps['onSuccess'] = (response, uploadFile) => {
 	form.value.thumb = URL.createObjectURL(uploadFile.raw!);

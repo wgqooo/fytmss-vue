@@ -2,8 +2,12 @@
     <div>
         <TableSearch :query="query" :options="searchOpt" :search="handleSearch" />
         <div class="container">
-            <TableCustom :columns="columns" :tableData="tableData" :total="page.total" :viewFunc="handleView"
-                :delFunc="handleDelete" :page-change="changePage" :editFunc="handleEdit">
+            <!-- <TableCustom :columns="columns" :pageSize="page.pageSize" :tableData="tableData" :total="page.total" :viewFunc="handleView"
+                :delFunc="handleDelete" :pagechange="changePage" :editFunc="handleEdit"> -->
+            <TableCustom :columns="columns" :pages="resPage.pages" :size="resPage.size" :total="resPage.total" 
+                :pageNum="resPage.pageNum" :pageSize="resPage.pageSize" :tableData="tableData" :viewFunc="handleView"
+                :delFunc="handleDelete" :pagechange="changePage" :editFunc="handleEdit" :changePageSize="changePageSize"
+                :freezeFunc="handleFreeze">
                 <template #toolbarBtn>
                     <el-button type="warning" :icon="CirclePlusFilled" @click="visible = true">新增</el-button>
                     <p class="tips">Tips : 新增员工的初始密码为出生日期</p>
@@ -21,7 +25,7 @@
 </template>
 
 <script setup lang="ts" name="user-info">
-import { ref, reactive } from 'vue';
+import { ref, reactive, toRefs } from 'vue';
 import { ElMessage } from 'element-plus';
 import { CirclePlusFilled } from '@element-plus/icons-vue';
 import { User } from '@/types/user';
@@ -30,6 +34,7 @@ import TableDetail from '@/components/table-detail.vue';
 import TableSearch from '@/components/table-search.vue';
 import { FormOption, FormOptionList } from '@/types/form-option';
 import service from '@/utils/request';
+import { Page } from '@/types/page';
 
 // 查询相关
 const query = reactive({
@@ -38,7 +43,7 @@ const query = reactive({
 const searchOpt = ref<FormOptionList[]>([
     { type: 'input', label: '用户名：', prop: 'name' }
 ])
-const handleSearch = () => {
+const handleSearch = (val:number) => {
     changePage(1);
 };
 
@@ -51,25 +56,37 @@ let columns = ref([
     { prop: 'empBirthday', label: '出生日期' },
     { prop: 'empMobile', label: '手机号码' },
     { prop: 'empAddress', label: '家庭住址' },
-    { prop: 'roleName', label: '职务' },
+    { prop: 'roleName', label: '职务'},
+    { prop: 'state', label: '状态'},
     { prop: 'operator', label: '操作',width:350 },
 ])
 const page = reactive({
-    index: 2,
-    size: 1,
-    total: 0,
+    index: 1,
+    size: 5,
 })
+
+const resPage = ref<Page>({
+    size:0,
+    pageSize:0,
+    total:0,
+    prePage:0,
+    nextPage:0,
+    pages:0,
+    pageNum:0,
+    navigatePages:0,
+    list:[]
+})
+
 const tableData = ref<User[]>([]);
 const getData = async () => {
     //获取表格数据
-    //const res = await fetchUserData()
     const res = await service({
         method: 'get',
         url: "base/user/list",
+        params: page
     });
-    console.log(res.data.page)
-    tableData.value = res.data.page.list;
-    page.total = res.data.page.total;
+    resPage.value = {...res.data.page}
+    tableData.value = resPage.value.list;
 };
 getData();
 
@@ -88,7 +105,6 @@ let options = ref<FormOption>({
         { type: 'select', label: '性别', prop: 'empSex', required: true, opts:[{value:'男',label:'男'},{value:'女',label:'女'}] },
         { type: 'date', label: '出生日期', prop: 'empBirthday', required: true},
         { type: 'input', label: '手机号码', prop: 'empMobile', required: true },
-        { type: 'input', label: '家庭住址', prop: 'empAddress', required: true },
         { type: 'select', label: '职务', prop: 'roleName', required: true,
             opts:[{value:'财务总监',label:'财务总监'},
             {value:'出纳员',label:'出纳员'},
@@ -100,6 +116,7 @@ let options = ref<FormOption>({
             {value:'旅行社',label:'旅行社'}
             ]
         },
+        { type: 'cascader', label: '家庭住址', prop: 'empAddress', required: true}
     ]
 })
 const visible = ref(false);
@@ -147,6 +164,12 @@ const updateData = async (user:User) => {
     getData();
 };
 
+const changePageSize = (index:number, size:number) => {
+    page.index = index;
+    page.size = size;
+    getData();
+};
+
 const closeDialog = () => {
     //修改用户信息的时候不能修改员工编号，新增用户信息的时候当然可以
     options.value.list[0].disabled = false;
@@ -170,13 +193,54 @@ const handleView = (row: User) => {
     { prop: 'empMobile', label: '手机号码' },
     { prop: 'empAddress', label: '家庭住址' },
     { prop: 'roleName', label: '职务' },
+    { prop: 'state', label: '状态' },
     ]
     visible1.value = true;
 };
 
 // 删除相关
-const handleDelete = (row: User) => {
-    ElMessage.success('删除成功');
+const handleDelete = async (row: User) => {
+    //加上await就是为了删除完毕后才调用getData()，保证关闭弹窗后数据更新
+    await service({
+        method:'delete',
+        url:'base/user/delete',
+        //在axios接口封装是接收参数是一个object类型，不能直接params或者data当成一个属性或者直接赋值
+        params:{
+            empNo:row.empNo
+        }
+    }).then(
+        response => {
+            if(response.data.code == 0){
+                ElMessage.success(response.data.msg)
+            }else {
+                ElMessage.error(response.data.msg)
+            }
+        },
+        error => {}
+    )
+    getData()
+}
+
+//解冻和冻结相关
+const isLock = ref<Boolean>()
+const handleFreeze = async(row: User) => {
+    await service({
+        method:'put',
+        url:'base/user/enable',
+        params:{
+            isEnabled:row.enabled == 1 ? 0 : 1,
+            empNo:row.empNo
+        }
+    }).then(
+        response => {
+            if(response.data.code == 0){
+                ElMessage.success(response.data.msg)
+            }else {
+                ElMessage.error(response.data.msg)
+            }
+        }
+    )
+    getData()
 }
 </script>
 

@@ -8,6 +8,7 @@ export interface User {
     empBirthday:Date
     empAddress:string;
     roleName: string;
+    enabled:number;
 }
 
 export interface Register {
